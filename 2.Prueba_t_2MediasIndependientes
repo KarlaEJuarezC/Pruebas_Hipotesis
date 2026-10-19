@@ -1,0 +1,78 @@
+#Descargar achivo "datos_T2mediasIndependientes.csv" en una carpeta en la computadora 
+#Leer el archivo de datos, señalando su ubicación  en la computadora
+datos<-read.csv(file.choose(), header = T) 
+
+# Conocer como están estructurados los datos
+str(datos)
+
+#Especificar que tratamiento es un factor. Se puede indicar el orden poniendo primero inhibidor y luego control, o al revés, depende del orden en el que se quiera hacer la prueba 
+datos$Tratamiento<-factor(datos$Tratamiento, levels=c("Inhibidor", "Control"))
+
+#Conocer estadisticos descriptuvos y realizar prueba de Shapiro Wilk en las dos poblaciones estadísticas ( el tratamiento Control y el tratamiento Inhibidor)
+library(doBy)
+summaryBy(Actividad~Tratamiento, data=datos, FUN=function(x){
+  c(m=mean(x), de=sd(x),se=sd(x)/length(x), var=var(x) n=length(x), shapiro=shapiro.test(x))})
+
+#Para hacer gráfica de distribución t
+t<-seq(-6,6,.001)
+y<-dt(t,6) # Se pone 6 porque esos son los grados de libertad
+plot(t,y,pch=".",col.main="darkgray",xlab="Valores de t",ylab= "Densidad de probabilidad", font.lab=2, cex.lab=1.5, cex.axis=1.3)
+abline(h=0)
+
+tcriticoi<- qt(0.05, 6, lower.tail = TRUE) #alfa/2=0.025, g.l=6, cola izquierda=lower.tail=TRUE
+tcriticoi
+c<-seq(-6,tcriticoi,0.001) # Genera 1000 valores desde t crítico hasta el -6
+d<-dt(c,6) #Genera distribución t para los valores generados en "c" usando 6 g.l.
+polygon(c(-6, c, tcriticoi),c(0,d,0),col="blue") #Colorea sólo la zona de alfa
+
+
+tcalculadoi<- -3.7182
+g<-seq(-6,tcalculadoi,0.001) # Genera 1000 valores desde t crítico hasta el 4
+h<-dt(g,6) #Genera distribución t para los valores generados en "a" usando 6 g.l.
+polygon(c(-6, g, tcalculadoi),c(0,h,0),col="cyan3") #Colorea sólo la zona de p-value
+
+
+#Realizar prueba de t de cola izquierda, en la que se tiene como hipótesis alternativa que Mu de Inhibidor será MENOR que MU de Control
+t.test(Actividad~Tratamiento, data=datos, alternative="less")
+
+
+# Se programa una función para calcular error estándar
+se <- function(a)
+{
+  return(sd(a, na.rm=TRUE)/sqrt(length(a)))
+}
+
+#A continuación se programa una función llamada data_summary en la que se calcularan media y error estandar usando la libreria plyr
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE), se = se(x[[col]]))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+  return(data_sum)
+}
+
+#Se genera una base de datos con las medias y error estándar de la actividad enzimática en función de los tratamientos. 
+Resumen<- data_summary(datos, varname="Actividad",  groupnames=c("Tratamiento"))
+Resumen
+
+#Para generar el gráfico de medias con error estándar
+library(ggplot2)
+#En aes(x....) se tiene que especificar que se reordenaran los Tratamientos en función del valor de la Actividad, para que así, coloque como primer barra la media de actividad en Control y como segunda,
+#la media de actividad en  Inhibidor. 
+grafica<-ggplot(Resumen, aes(x = reorder(Tratamiento, -Actividad), y=Actividad, fill=Tratamiento)) + 
+  geom_bar(stat="identity", position=position_dodge()) +
+  ylim(0, 30) +
+  geom_errorbar(aes(ymin=Actividad-se, ymax=Actividad+se), width=.2,
+                position=position_dodge(.9))+
+  scale_fill_manual(values=c('#855C75', '#D9AF6B'))+
+  labs( title="Columnas (medias)   ", 
+        subtitle="+/- Error estándar", caption="Elaboración en R") +
+  annotate("text", label = "*", x = 1, y = 42, size = 3, colour = "black", fontface = "bold")+
+  theme_minimal()
+  
+#Se almacena la gráfica en formato jpg, de 20 x 15 cm
+ggsave( "Figura7.15.jpg", grafica, width = 20, height = 15, units = "cm")
+
+
