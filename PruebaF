@@ -1,0 +1,56 @@
+#Para hacer gráfica de distribución F
+f<-seq(0,13,.001)
+y<-df(f,3,3) # Se pone 3 y 3 porque esos son los grados de libertad 1 y 2
+plot(f,y,pch=".",col.main="darkgray",xlab="Valores de F",ylab= "Densidad de probabilidad", font.lab=2, cex.lab=1.5, cex.axis=1.3)
+abline(h=0)
+
+#Se calcula el F crítico izquierdo
+Fcriticoi<- qf(0.025, 3,3, lower.tail = TRUE) #alfa/2=0.025, g.l=6, cola izquierda=lower.tail=TRUE
+Fcriticoi
+c<-seq(0,Fcriticoi,0.001) # Genera 1000 valores desde t crítico hasta el 0
+d<-df(c,3,3) #Genera distribución t para los valores generados en "c" usando 6 g.l.
+polygon(c(0, c, Fcriticoi),c(0,d,0),col="midnightblue") #Colorea sólo la zona de alfa
+
+#Se calcula el F crítico derecho
+Fcriticod<- qt(0.025, 3,3, lower.tail = FALSE) #alfa/2=0.025, g.l=9, cola derecha=lower.tail=FALSE
+Fcriticod
+a<-seq(Fcriticod,13,0.001) # Genera 1000 valores desde t crítico hasta el 4
+b<-df(a,3,3) #Genera distribución t para los valores generados en "a" usando 9 g.l.
+polygon(c(Fcriticod,a,13),c(0,b,0),col="midnightblue") #Colorea sólo la zona de alfa
+
+#Se especifica el F calculado derecho (varianza grande/varianza chica)
+Fcalculadod<- 1.3686
+g<-seq(Fcalculadod,13,0.001) # Genera 1000 valores desde t crítico hasta el 4
+h<-df(g,3,3) #Genera distribución t para los valores generados en "a" usando 9 g.l.
+polygon(c(Fcalculadod,g,13),c(0,h,0),col="lightsteelblue1") #Colorea sólo la zona de alfa
+
+#Se especifica el F calculado izquierdo (varianza chica/varianza grande)
+Fcalculadoi<- 0.73066
+i<-seq(0,Fcalculadoi,0.001) # Genera 1000 valores desde t crítico hasta el 4
+j<-df(i,3,3) #Genera distribución t para los valores generados en "c" usando 9 g.l.
+polygon(c(0, i, Fcalculadoi),c(0,j,0),col="lightsteelblue1") #Colorea sólo la zona de alfa
+
+#Se seleccionan los datos Inhibidor y Control como dos vectores diferentes
+ActividadInhibidor<-subset(datos, Tratamiento=="Inhibidor")
+ActividadControl<-subset(datos, Tratamiento=="Control")
+
+#La prueba se pide en el órden Inhibidor/Control de manera que se divide varianza chica/varianza grande
+var.test(ActividadInhibidor$Actividad,ActividadControl$Actividad,alternative="two.sided")
+
+#La prueba se pide en el órden Inhibidor/Control de manera que se divide varianza grande/varianza chica
+var.test(ActividadControl$Actividad,ActividadInhibidor$Actividad,alternative="two.sided")
+
+#El p-value en cualquiera de los casos resulta de sumar las áreas desde el F calculado izquierdo hasta -infinito y el F calculado derecho hasta infinito
+pf(0.73066,3,3,lower.tail = T)
+pf(1.3686,3,3,lower.tail = F)
+
+#Para trazar el gráfico de dispersión
+library(ggplot2)
+grafica2<-ggplot(data=datos, 
+       mapping=aes(x=Tratamiento, y=Actividad)) +
+        geom_point(aes(color=Tratamiento), size=3)+
+        theme_minimal()
+
+#Para guardar el gráfico
+ggsave( "grafica2.jpg", grafica2, width = 20, height = 15, units = "cm")
+
